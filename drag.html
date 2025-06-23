@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIxKumite - Video Analyzer</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    h1 {
+      font-size: 3em;
+      margin-bottom: 20px;
+      animation: fadeIn 2s ease-in-out;
+    }
+
+    #drop-zone {
+      border: 3px dashed #00bcd4;
+      border-radius: 15px;
+      width: 80%;
+      max-width: 700px;
+      height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background-color: rgba(255, 255, 255, 0.05);
+      transition: background 0.3s;
+      animation: fadeInUp 2s ease-in-out;
+      position: relative;
+    }
+
+    #drop-zone.hidden {
+      display: none;
+    }
+
+    .styled-upload-btn {
+      background-color: transparent;
+      border: 2px solid #00bcd4;
+      color: #00bcd4;
+      padding: 12px 26px;
+      font-size: 1.1em;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .styled-upload-btn:hover {
+      background-color: #00bcd4;
+      color: white;
+    }
+
+    #video-container {
+      margin-top: 30px;
+      width: 640px;
+      animation: fadeInUp 2s ease-in-out;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    video {
+      width: 640px;
+      height: 360px;
+      border-radius: 10px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .upload-btn-below {
+      margin-top: 20px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <h1>AIxKumite</h1>
+  <div id="drop-zone">
+    <button id="upload-btn" class="styled-upload-btn">Upload Video</button>
+  </div>
+  <div id="video-container"></div>
+
+  <script>
+    const dropZone = document.getElementById('drop-zone');
+    const uploadBtn = document.getElementById('upload-btn');
+    const videoContainer = document.getElementById('video-container');
+
+    function createUploadButton() {
+      const newUploadBtn = document.createElement('button');
+      newUploadBtn.id = 'upload-btn';
+      newUploadBtn.className = 'styled-upload-btn upload-btn-below';
+      newUploadBtn.textContent = 'Upload New Video';
+      newUploadBtn.onclick = () => triggerFileUpload();
+      return newUploadBtn;
+    }
+
+    function triggerFileUpload() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'video/*';
+      input.onchange = () => {
+        if (input.files.length > 0) {
+          handleFile(input.files[0]);
+        }
+      };
+      input.click();
+    }
+
+    uploadBtn.addEventListener('click', triggerFileUpload);
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('hover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('hover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('hover');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+
+    function handleFile(file) {
+      if (file && file.type.startsWith('video/')) {
+        const videoURL = URL.createObjectURL(file);
+        dropZone.classList.add('hidden');
+        videoContainer.innerHTML = `
+          <video controls autoplay>
+            <source src="${videoURL}" type="${file.type}">
+            Your browser does not support the video tag.
+          </video>
+        `;
+        videoContainer.appendChild(createUploadButton());
+      } else {
+        alert('Please upload a valid video file.');
+      }
+    }
+  </script>
+</body>
+</html>
