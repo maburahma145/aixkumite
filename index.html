@@ -13,15 +13,26 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      height: 100vh;
-      overflow: hidden;
+      justify-content: start;
+      min-height: 100vh;
+      padding-top: 40px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      animation: fadeIn 2s ease-in-out;
+    }
+
+    #logo {
+      height: 60px;
+      margin-right: 15px;
     }
 
     h1 {
-      font-size: 3em;
-      margin-bottom: 20px;
-      animation: fadeIn 2s ease-in-out;
+      font-size: 2.5em;
+      margin: 0;
     }
 
     #drop-zone {
@@ -29,7 +40,7 @@
       border-radius: 15px;
       width: 80%;
       max-width: 700px;
-      height: 300px;
+      height: 200px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -37,7 +48,10 @@
       background-color: rgba(255, 255, 255, 0.05);
       transition: background 0.3s;
       animation: fadeInUp 2s ease-in-out;
-      position: relative;
+    }
+
+    #drop-zone.hover {
+      background-color: rgba(0, 188, 212, 0.2);
     }
 
     #drop-zone.hidden {
@@ -63,10 +77,10 @@
     #video-container {
       margin-top: 30px;
       width: 640px;
-      animation: fadeInUp 2s ease-in-out;
       display: flex;
       flex-direction: column;
       align-items: center;
+      animation: fadeInUp 2s ease-in-out;
     }
 
     video {
@@ -78,6 +92,32 @@
 
     .upload-btn-below {
       margin-top: 20px;
+    }
+
+    #progress-container {
+      width: 100%;
+      max-width: 640px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    #progress-bar {
+      width: 0%;
+      height: 20px;
+      background: #00bcd4;
+      border-radius: 5px;
+    }
+
+    #progress-wrapper {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    #progress-text {
+      text-align: center;
+      margin-top: 5px;
     }
 
     @keyframes fadeIn {
@@ -92,71 +132,138 @@
   </style>
 </head>
 <body>
-  <h1>AIxKumite</h1>
+  <div class="header">
+    <img id="logo" src="logo.png" alt="AIXKumite Logo" />
+    <h1>AIxKumite</h1>
+  </div>
+
   <div id="drop-zone">
     <button id="upload-btn" class="styled-upload-btn">Upload Video</button>
   </div>
-  <div id="video-container"></div>
+
+  <div id="video-container">
+    <video id="output-video" controls autoplay style="display: none;"></video>
+
+    <div id="progress-container">
+      <div id="progress-wrapper">
+        <div id="progress-bar"></div>
+      </div>
+      <p id="progress-text">Uploading...</p>
+    </div>
+  </div>
 
   <script>
     const dropZone = document.getElementById('drop-zone');
     const uploadBtn = document.getElementById('upload-btn');
     const videoContainer = document.getElementById('video-container');
-
+    const videoElement = document.getElementById('output-video');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+  
     function createUploadButton() {
       const newUploadBtn = document.createElement('button');
-      newUploadBtn.id = 'upload-btn';
+      newUploadBtn.id = 'upload-btn-below';
       newUploadBtn.className = 'styled-upload-btn upload-btn-below';
       newUploadBtn.textContent = 'Upload New Video';
-      newUploadBtn.onclick = () => triggerFileUpload();
+      newUploadBtn.onclick = triggerFileUpload;
       return newUploadBtn;
     }
-
+  
     function triggerFileUpload() {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'video/*';
+  
       input.onchange = () => {
         if (input.files.length > 0) {
           handleFile(input.files[0]);
         }
       };
+  
       input.click();
     }
-
+  
     uploadBtn.addEventListener('click', triggerFileUpload);
-
+  
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
       dropZone.classList.add('hover');
     });
-
+  
     dropZone.addEventListener('dragleave', () => {
       dropZone.classList.remove('hover');
     });
-
+  
     dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropZone.classList.remove('hover');
       const file = e.dataTransfer.files[0];
       if (file) handleFile(file);
     });
-
+  
     function handleFile(file) {
-      if (file && file.type.startsWith('video/')) {
-        const videoURL = URL.createObjectURL(file);
-        dropZone.classList.add('hidden');
-        videoContainer.innerHTML = `
-          <video controls autoplay>
-            <source src="${videoURL}" type="${file.type}">
-            Your browser does not support the video tag.
-          </video>
-        `;
-        videoContainer.appendChild(createUploadButton());
-      } else {
+      if (!file || !file.type.startsWith('video/')) {
         alert('Please upload a valid video file.');
+        return;
       }
+  
+      const formData = new FormData();
+      formData.append('video', file);
+  
+      const xhr = new XMLHttpRequest();
+      //xhr.open('POST', 'https://your-flask-analyzer.onrender.com/analyze', true);
+      xhr.open('POST', 'http://127.0.0.1:5000/analyze', true);
+      
+      xhr.responseType = 'blob';
+  
+      // UI reset
+      dropZone.classList.add('hidden');
+      progressContainer.style.display = 'block';
+      progressBar.style.width = '0%';
+      progressText.textContent = 'Uploading...';
+      videoElement.style.display = 'none';
+  
+      // Remove existing "Upload New" button
+      const oldBtn = document.getElementById('upload-btn-below');
+      if (oldBtn) oldBtn.remove();
+  
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = (event.loaded / event.total) * 100;
+          progressBar.style.width = `${percent}%`;
+          progressText.textContent = `Uploading: ${Math.round(percent)}%`;
+        }
+      };
+  
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          progressText.textContent = `Processing video...`;
+  
+          // Delay to simulate backend work (optional)
+          setTimeout(() => {
+            const videoURL = URL.createObjectURL(xhr.response);
+            videoElement.src = videoURL;
+            videoElement.style.display = 'block';
+            progressContainer.style.display = 'none';
+            videoContainer.appendChild(createUploadButton());
+          }, 500);
+        } else {
+          alert('Video processing failed.');
+          progressContainer.style.display = 'none';
+          dropZone.classList.remove('hidden');
+        }
+      };
+  
+      xhr.onerror = () => {
+        alert('Upload failed. Is the Flask server still running?');
+        progressContainer.style.display = 'none';
+        dropZone.classList.remove('hidden');
+      };
+  
+      xhr.send(formData);
     }
   </script>
+  
 </body>
 </html>
