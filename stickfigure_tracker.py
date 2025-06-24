@@ -1,15 +1,13 @@
-from flask import Flask, request, send_file, render_template_string
-import os, tempfile, webbrowser
+from flask import Flask, request, send_file, jsonify
+import os
+import tempfile
 import cv2
 import mediapipe as mp
 from datetime import datetime
-from threading import Timer
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
-
-HTML_FILE = "index.html"
 
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
@@ -46,24 +44,23 @@ def process_video(input_path):
     return output_path
 
 @app.route('/')
-def home():
-    with open(HTML_FILE, 'r') as f:
-        return render_template_string(f.read())
+def status():
+    return jsonify({"status": "Server is running"}), 200
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
+    if 'video' not in request.files:
+        return jsonify({'error': 'No video file provided'}), 400
+
     video = request.files['video']
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_in:
         video.save(temp_in.name)
         output_path = process_video(temp_in.name)
-        return send_file(
-            output_path, mimetype='video/mp4',
-            as_attachment=False, download_name='result.mp4'
-        )
 
-def open_browser():
-    webbrowser.open_new("http://127.0.0.1:5000")
+    return send_file(
+        output_path, mimetype='video/mp4',
+        as_attachment=False, download_name='result.mp4'
+    )
 
 if __name__ == '__main__':
-    Timer(1, open_browser).start()
-    app.run(debug=False)
+    app.run(debug=False, host='0.0.0.0', port=5000)
